@@ -1,0 +1,16 @@
+{
+  "name": "server",
+  "module": "src/producer/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "producer": "bun run src/producer/index.ts",
+    "stream": "bun run src/stream/index.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
