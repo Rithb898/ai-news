@@ -12,5 +12,10 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.8.0",
+    "kokoro-js": "^1.2.1",
+    "openai": "^6.38.0"
   }
 }

@@ -25,3 +25,15 @@ export interface State {
   airedFingerprints: { fingerprint: string; airedAt: string }[];
   nextSegmentId: number;
 }
+
+export interface RssItem {
+  title: string;
+  summary: string;
+  url: string;
+  source: string;
+  publishedAt: string;
+}
+
+export interface Dialogue {
+  turns: Turn[];
+}
