@@ -20,4 +20,11 @@ export const config = {
     "the alignment problem",
     "scaling laws",
   ],
+  hls: {
+    chunkDurationSec: 4,
+    windowSize: 10,
+    targetDuration: 5,
+    listenerTtlMs: 20_000,
+    chunkGraceSec: 60,
+  },
 } as const;

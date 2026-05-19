@@ -2,7 +2,7 @@ import { paths } from "./paths.ts";
 import type { State } from "./types.ts";
 
 const empty: State = {
-  playhead: { segmentId: 0, byteOffset: 0 },
+  playhead: { segmentId: 0, chunkIndex: 0 },
   airedFingerprints: [],
   nextSegmentId: 0,
 };

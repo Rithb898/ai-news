@@ -5,6 +5,11 @@ export interface Turn {
   text: string;
 }
 
+export interface HlsChunk {
+  file: string;
+  durationSec: number;
+}
+
 export interface SegmentMeta {
   segmentId: number;
   title: string;
@@ -13,17 +18,20 @@ export interface SegmentMeta {
   durationSec: number;
   scriptText: string;
   generatedAt: string;
+  chunks: HlsChunk[];
 }
 
 export interface Playhead {
   segmentId: number;
-  byteOffset: number;
+  chunkIndex: number;
 }
 
 export interface State {
   playhead: Playhead;
   airedFingerprints: { fingerprint: string; airedAt: string }[];
   nextSegmentId: number;
+  lastTailTurns?: Turn[];
+  lastGeneratedAt?: string;
 }
 
 export interface RssItem {

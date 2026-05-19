@@ -2,7 +2,8 @@ import { mkdir, rename } from "node:fs/promises";
 import { paths } from "../shared/paths.ts";
 import type { Dialogue, RssItem, SegmentMeta } from "../shared/types.ts";
 import { encodeMp3 } from "./encode.ts";
-import { renderTurns } from "./tts.ts";
+import { sliceToHls } from "./hls.ts";
+import { renderTurns, type RenderedAudio } from "./tts.ts";
 
 export async function ensureDirs(): Promise<void> {
   await Promise.all([
@@ -10,6 +11,7 @@ export async function ensureDirs(): Promise<void> {
     mkdir(paths.meta, { recursive: true }),
     mkdir(paths.scripts, { recursive: true }),
     mkdir(paths.logs, { recursive: true }),
+    mkdir(paths.hls, { recursive: true }),
   ]);
 }
 
@@ -25,20 +27,29 @@ export interface BuildSegmentResult {
   meta: SegmentMeta;
 }
 
-export async function buildSegment(
-  input: BuildSegmentInput,
+export interface WriteSegmentInput {
+  segmentId: number;
+  item: RssItem;
+  dialogue: Dialogue;
+  audio: RenderedAudio;
+}
+
+export async function writeSegment(
+  input: WriteSegmentInput,
 ): Promise<BuildSegmentResult> {
   await ensureDirs();
-  const { segmentId, item, dialogue } = input;
-
-  const { wav, durationSec } = await renderTurns(dialogue.turns);
+  const { segmentId, item, dialogue, audio } = input;
 
   const mp3Path = paths.segment(segmentId);
   const metaPath = paths.segmentMeta(segmentId);
   const mp3Tmp = `${mp3Path}.tmp`;
   const metaTmp = `${metaPath}.tmp`;
 
-  await encodeMp3(wav, mp3Tmp);
+  await encodeMp3(audio.wav, mp3Tmp);
+  // Put MP3 in place so the slicer reads a stable file.
+  await rename(mp3Tmp, mp3Path);
+
+  const chunks = await sliceToHls(segmentId, mp3Path);
 
   const scriptText = dialogue.turns
     .map((t) => `${t.speaker}: ${t.text}`)
@@ -49,16 +60,22 @@ export async function buildSegment(
     title: item.title,
     source: item.source,
     url: item.url,
-    durationSec,
+    durationSec: audio.durationSec,
     scriptText,
     generatedAt: new Date().toISOString(),
+    chunks,
   };
 
   await Bun.write(metaTmp, JSON.stringify(meta, null, 2));
-
-  // Rename mp3 first so meta only appears once the audio is in place.
-  await rename(mp3Tmp, mp3Path);
+  // Rename meta last so consumers only see the segment when chunks + meta are ready.
   await rename(metaTmp, metaPath);
 
   return { mp3Path, metaPath, meta };
+}
+
+export async function buildSegment(
+  input: BuildSegmentInput,
+): Promise<BuildSegmentResult> {
+  const audio = await renderTurns(input.dialogue.turns);
+  return writeSegment({ ...input, audio });
 }

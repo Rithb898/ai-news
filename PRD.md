@@ -45,12 +45,12 @@ scripts/                   # raw GPT JSON dumps (debug)
 
 **Goal**: given an article, produce a parsed dialogue JSON.
 
-- [ ] RSS fetcher: pulls all feeds in `config.rssFeeds`, returns normalized `{title, summary, url, source, publishedAt}`.
-- [ ] Dedup: normalize title → token Jaccard against `state.airedFingerprints` (threshold 0.6).
-- [ ] OpenAI client wrapper with structured-output JSON schema (`turns: [{speaker, text}]`).
-- [ ] System prompt (cached) + per-article user prompt.
-- [ ] Validates: 8–12 turns, alternating-ish speakers, total ~180 words.
-- [ ] CLI: `bun run server/src/producer/test-script.ts <rss-item-index>` → prints dialogue.
+- [x] RSS fetcher: pulls all feeds in `config.rssFeeds`, returns normalized `{title, summary, url, source, publishedAt}`.
+- [x] Dedup: normalize title → token Jaccard against `state.airedFingerprints` (threshold 0.6).
+- [x] OpenAI client wrapper with structured-output JSON schema (`turns: [{speaker, text}]`).
+- [x] System prompt (cached) + per-article user prompt.
+- [x] Validates: 8–12 turns, alternating-ish speakers, total ~180 words.
+- [x] CLI: `bun run server/src/producer/test-script.ts <rss-item-index>` → prints dialogue.
 
 **Done when**: dialogue JSON is reliably parseable, sounds conversational, ~180 words.
 
@@ -60,12 +60,12 @@ scripts/                   # raw GPT JSON dumps (debug)
 
 **Goal**: dialogue JSON → finished MP3 on disk.
 
-- [ ] Integrate `kokoro-js` (or transformers.js + Kokoro ONNX). Confirm ARM64 inference works on Oracle VPS.
-- [ ] Per-turn TTS: render WAV per turn with assigned voice.
-- [ ] Concatenate WAVs with ~200ms silence between turns.
-- [ ] ffmpeg encode → `seg-NNNNN.mp3` (constant bitrate, 128kbps, mono).
-- [ ] Write `meta/seg-NNNNN.json` with title/source/url/duration.
-- [ ] Atomic write (write to `.tmp`, rename) so stream never reads a half-written file.
+- [x] Integrate `kokoro-js` (or transformers.js + Kokoro ONNX). Confirm ARM64 inference works on Oracle VPS.
+- [x] Per-turn TTS: render WAV per turn with assigned voice.
+- [x] Concatenate WAVs with ~200ms silence between turns.
+- [x] ffmpeg encode → `seg-NNNNN.mp3` (constant bitrate, 128kbps, mono).
+- [x] Write `meta/seg-NNNNN.json` with title/source/url/duration.
+- [x] Atomic write (write to `.tmp`, rename) so stream never reads a half-written file.
 
 **Done when**: end-to-end CLI command takes one RSS item → produces a playable MP3 + meta file.
 
@@ -75,11 +75,11 @@ scripts/                   # raw GPT JSON dumps (debug)
 
 **Goal**: continuous, self-healing segment generation.
 
-- [ ] Main loop: compute `bufferedSecondsAhead = sum(meta.duration for unplayed segments)`. If < 30 min, generate next; else sleep 30s.
-- [ ] Pick next article: freshest non-aired RSS item; if none, draw from `config.evergreenTopics`.
-- [ ] On generation success: append fingerprint to `state.airedFingerprints` (cap last 7 days), increment segment counter.
-- [ ] On failure: retry 3x with exponential backoff (1s, 4s, 16s) per stage (LLM, TTS, ffmpeg). Skip item + log if all fail.
-- [ ] Garbage collect: delete segments + meta after they're past `state.playhead.segmentId` by ≥ 10 minutes.
+- [x] Main loop: compute `bufferedSecondsAhead = sum(meta.duration for unplayed segments)`. If < 30 min, generate next; else sleep 30s.
+- [x] Pick next article: freshest non-aired RSS item; if none, draw from `config.evergreenTopics`.
+- [x] On generation success: append fingerprint to `state.airedFingerprints` (cap last 7 days), increment segment counter.
+- [x] On failure: retry 3x with exponential backoff (1s, 4s, 16s) per stage (LLM, TTS, ffmpeg). Skip item + log if all fail.
+- [x] Garbage collect: delete segments + meta after they're past `state.playhead.segmentId` by ≥ 10 minutes.
 
 **Done when**: producer runs unsupervised for an hour, buffer stays around 30 min, failures are logged not fatal.
 
@@ -89,18 +89,18 @@ scripts/                   # raw GPT JSON dumps (debug)
 
 **Goal**: serve continuous MP3 + SSE to listeners with shared playhead.
 
-- [ ] `GET /stream`:
+- [x] `GET /stream`:
   - Track connection in `Set<Response>`.
   - If 0 segments exist, return 503.
   - Send MP3 bytes from `state.playhead` position, advancing playhead **only when `connections.size > 0`**.
   - On segment end: increment `segmentId`, reset `byteOffset`, broadcast SSE `nowPlaying`.
   - Persist `state.playhead` to disk every ~2s (debounced).
-- [ ] `GET /events` (SSE):
+- [x] `GET /events` (SSE):
   - On connect: send `nowPlaying` (current) + `listeners` (count) + `history` (last 20).
   - Broadcast `nowPlaying` on segment boundary, `listeners` on connect/disconnect.
-- [ ] `GET /api/health`: process + buffer-ahead + listener count.
-- [ ] Stale-playhead handling on boot: if next segment's `generatedAt` > 24h old, fast-forward through stale segments (delete them).
-- [ ] If buffer fully drains (no next segment): close all active `/stream` connections with 503.
+- [x] `GET /api/health`: process + buffer-ahead + listener count.
+- [x] Stale-playhead handling on boot: if next segment's `generatedAt` > 24h old, fast-forward through stale segments (delete them).
+- [x] If buffer fully drains (no next segment): close all active `/stream` connections with 503.
 
 **Done when**: `curl https://api.../stream | ffplay -` plays continuous audio, two `curl`s hear identical bytes, closing all clients freezes the playhead.
 
@@ -110,14 +110,14 @@ scripts/                   # raw GPT JSON dumps (debug)
 
 **Goal**: the listener page.
 
-- [ ] Single `page.tsx`, dark theme, mobile-first.
-- [ ] Big play/pause button → toggles `<audio src={STREAM_URL}>`.
-- [ ] Now Playing card: title, source, "read original →" link.
-- [ ] History list: last 20 played items.
-- [ ] Live listener count top-right.
-- [ ] SSE client (`EventSource(/events)`) drives all UI state.
-- [ ] Warmup splash if `/api/health` reports 0 segments.
-- [ ] Reconnect logic for SSE and `<audio>` `error` events.
+- [x] Single `page.tsx`, dark theme, mobile-first.
+- [x] Big play/pause button → toggles `<audio src={STREAM_URL}>`.
+- [x] Now Playing card: title, source, "read original →" link.
+- [x] History list: last 20 played items.
+- [x] Live listener count top-right.
+- [x] SSE client (`EventSource(/events)`) drives all UI state.
+- [x] Warmup splash if `/api/health` reports 0 segments.
+- [x] Reconnect logic for SSE and `<audio>` `error` events.
 
 **Done when**: page loads on phone + desktop, plays continuous radio, history populates as segments turn over.
 

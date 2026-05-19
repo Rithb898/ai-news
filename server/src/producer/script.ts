@@ -3,8 +3,10 @@ import type { Dialogue, RssItem, Turn } from "../shared/types.ts";
 import { MODEL, openai } from "./openai.ts";
 import {
   DIALOGUE_SCHEMA,
+  FORBIDDEN_PATTERNS,
   SYSTEM_PROMPT,
   userPromptForArticle,
+  type PromptContext,
 } from "./prompts.ts";
 
 export class ScriptValidationError extends Error {}
@@ -49,13 +51,23 @@ export function validateDialogue(d: Dialogue): void {
   }
 }
 
-export async function generateDialogue(item: RssItem): Promise<Dialogue> {
+export function findForbidden(turns: Turn[]): string | null {
+  for (const t of turns) {
+    for (const re of FORBIDDEN_PATTERNS) {
+      const m = t.text.match(re);
+      if (m) return m[0];
+    }
+  }
+  return null;
+}
+
+async function callModel(item: RssItem, ctx: PromptContext): Promise<Dialogue> {
   const client = openai();
   const resp = await client.chat.completions.create({
     model: MODEL,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: userPromptForArticle(item) },
+      { role: "user", content: userPromptForArticle(item, ctx) },
     ],
     response_format: { type: "json_schema", json_schema: DIALOGUE_SCHEMA },
   });
@@ -69,7 +81,27 @@ export async function generateDialogue(item: RssItem): Promise<Dialogue> {
   } catch (e) {
     throw new Error(`json parse: ${(e as Error).message}\n${raw}`);
   }
-
   validateDialogue(parsed);
   return parsed;
+}
+
+export async function generateDialogue(
+  item: RssItem,
+  ctx: PromptContext = { coldOpen: false },
+): Promise<Dialogue> {
+  let dialogue = await callModel(item, ctx);
+
+  if (!ctx.coldOpen) {
+    let attempts = 0;
+    while (attempts < 2) {
+      const hit = findForbidden(dialogue.turns);
+      if (!hit) break;
+      attempts++;
+      console.error(
+        `[script] forbidden phrase "${hit}" detected; retry ${attempts}/2`,
+      );
+      dialogue = await callModel(item, { ...ctx, strictReminder: true });
+    }
+  }
+  return dialogue;
 }
